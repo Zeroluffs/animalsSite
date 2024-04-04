@@ -19,7 +19,10 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="App">
+      <div
+        className="
+      max-w-7xl mx-auto"
+      >
         <AnimalList />
       </div>
     </QueryClientProvider>
@@ -103,9 +106,12 @@ const AnimalList = () => {
           {sortByAge ? "Sort by Age (Descending)" : "Sort by Age (Ascending)"}
         </Button>
       </div>
-      {filteredAnimals.map((animal) => (
-        <AnimalCard key={animal.id} animal={animal} />
-      ))}
+
+      <div className="flex flex-wrap gap-4 mt-12">
+        {filteredAnimals.map((animal) => (
+          <AnimalCard key={animal.id} animal={animal} />
+        ))}
+      </div>
     </div>
   );
 };
