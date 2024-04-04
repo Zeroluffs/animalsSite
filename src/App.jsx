@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { QueryClient, QueryClientProvider, useQuery } from "react-query";
-import { getAnimals } from "./services/requests.js";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+  useMutation,
+} from "react-query";
+import { deleteAnimal, getAnimals, updateAnimal } from "./services/requests.js";
 import {
   Button,
   Card,
@@ -12,6 +17,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Modal,
+  Box,
+  Stack,
 } from "@mui/material";
 
 const queryClient = new QueryClient();
@@ -19,10 +27,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div
-        className="
-      max-w-7xl mx-auto"
-      >
+      <div className="App">
         <AnimalList />
       </div>
     </QueryClientProvider>
@@ -35,6 +40,9 @@ const AnimalList = () => {
   const [filterType, setFilterType] = useState("");
   const [sortByAge, setSortByAge] = useState(false);
   const [animalTypes, setAnimalTypes] = useState([]);
+  const [selectedAnimal, setSelectedAnimal] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [newCheckupDate, setNewCheckupDate] = useState("");
 
   useEffect(() => {
     if (data) {
@@ -42,6 +50,19 @@ const AnimalList = () => {
       setAnimalTypes(types);
     }
   }, [data]);
+
+  const { mutate: updateAnimalMutation } = useMutation(updateAnimal, {
+    onSuccess: () => {
+      queryClient.invalidateQueries("animals");
+      setModalOpen(false);
+    },
+  });
+
+  const { mutate: deleteAnimalMutation } = useMutation(deleteAnimal, {
+    onSuccess: () => {
+      queryClient.invalidateQueries("animals");
+    },
+  });
 
   const handleSortByAge = () => {
     setSortByAge(!sortByAge);
@@ -53,6 +74,23 @@ const AnimalList = () => {
 
   const handleFilterTypeChange = (event) => {
     setFilterType(event.target.value);
+  };
+
+  const handleShareButtonClick = (animal) => {
+    setSelectedAnimal(animal);
+    setModalOpen(true);
+  };
+
+  const handleDeleteButtonClick = (id) => {
+    deleteAnimalMutation(id);
+  };
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setNewCheckupDate("");
+  };
+
+  const handleCheckupDateChange = (event) => {
+    setNewCheckupDate(event.target.value);
   };
 
   if (isLoading) return <div>Loading...</div>;
@@ -69,6 +107,7 @@ const AnimalList = () => {
       (animal) => animal.type === filterType,
     );
   }
+
   if (sortByAge) {
     filteredAnimals.sort((a, b) => parseInt(a.age) - parseInt(b.age));
   }
@@ -106,12 +145,69 @@ const AnimalList = () => {
           {sortByAge ? "Sort by Age (Descending)" : "Sort by Age (Ascending)"}
         </Button>
       </div>
-
-      <div className="flex flex-wrap gap-4 mt-12">
+      <div className="flex flex-wrap">
         {filteredAnimals.map((animal) => (
-          <AnimalCard key={animal.id} animal={animal} />
+          <AnimalCard
+            key={animal.id}
+            animal={animal}
+            onShareButtonClick={handleShareButtonClick}
+            onDeleteButtonClick={handleDeleteButtonClick}
+          />
         ))}
       </div>
+      <Modal
+        open={modalOpen}
+        onClose={handleModalClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            Update Checkup Date
+          </Typography>
+          <TextField
+            id="checkup-date"
+            label="New Checkup Date"
+            type="date"
+            defaultValue=""
+            InputLabelProps={{
+              shrink: true,
+            }}
+            value={newCheckupDate}
+            onChange={handleCheckupDateChange}
+            style={{ marginBottom: "20px" }}
+          />
+          <Stack direction="row" spacing={2} justifyContent="flex-end">
+            <Button onClick={handleModalClose} variant="contained">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const updatedAnimal = {
+                  id: selectedAnimal.id,
+                  date: newCheckupDate,
+                };
+                updateAnimalMutation(updatedAnimal);
+              }}
+              variant="contained"
+              color="primary"
+            >
+              Update
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
     </div>
   );
 };
@@ -121,11 +217,11 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString();
 };
 
-const AnimalCard = ({ animal }) => {
+const AnimalCard = ({ animal, onShareButtonClick, onDeleteButtonClick }) => {
   const formattedNextCheckup = formatDate(animal.next_checkup);
 
   return (
-    <Card sx={{ maxWidth: 345, marginBottom: 2 }}>
+    <Card className="m-2 flex-shrink-0" sx={{ maxWidth: 345 }}>
       <CardContent>
         <Typography gutterBottom variant="h5" component="div">
           {animal.name}
@@ -141,8 +237,11 @@ const AnimalCard = ({ animal }) => {
         </Typography>
       </CardContent>
       <CardActions>
-        <Button size="small">Share</Button>
+        <Button size="small" onClick={() => onShareButtonClick(animal)}>
+          Share
+        </Button>
         <Button
+          onClick={() => onDeleteButtonClick(animal.id)}
           size="small"
           variant="contained"
           sx={{ bgcolor: "error.main", color: "white" }}

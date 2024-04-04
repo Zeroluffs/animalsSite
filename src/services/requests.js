@@ -29,9 +29,11 @@ export const addAnimal = async (animal) => {
 };
 
 // Function to handle PUT request
-export const updateAnimal = async (id, animal) => {
+export const updateAnimal = async (animal) => {
   try {
-    const response = await axios.put(`${BASE_URL}/${id}`, animal);
+    const response = await axios.put(`${BASE_URL}/${animal.id}`, {
+      next_checkup: animal.date,
+    });
     return response.data;
   } catch (error) {
     handleErrors(error);
