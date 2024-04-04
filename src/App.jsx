@@ -238,7 +238,7 @@ const AnimalCard = ({ animal, onShareButtonClick, onDeleteButtonClick }) => {
       </CardContent>
       <CardActions>
         <Button size="small" onClick={() => onShareButtonClick(animal)}>
-          Share
+          Update
         </Button>
         <Button
           onClick={() => onDeleteButtonClick(animal.id)}
