@@ -1,21 +1,22 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery } from "react-query";
-import "./App.css";
 import { getAnimals } from "./services/requests.js";
-
 import {
   Button,
   Card,
   CardActions,
   CardContent,
-  CardMedia,
   Typography,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
+
 const queryClient = new QueryClient();
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <QueryClientProvider client={queryClient}>
       <div className="App">
@@ -24,25 +25,96 @@ function App() {
     </QueryClientProvider>
   );
 }
+
 const AnimalList = () => {
   const { data, isLoading, isError } = useQuery("animals", getAnimals);
+  const [filterAge, setFilterAge] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [sortByAge, setSortByAge] = useState(false);
+  const [animalTypes, setAnimalTypes] = useState([]);
+
+  useEffect(() => {
+    if (data) {
+      const types = [...new Set(data.map((animal) => animal.type))];
+      setAnimalTypes(types);
+    }
+  }, [data]);
+
+  const handleSortByAge = () => {
+    setSortByAge(!sortByAge);
+  };
+
+  const handleFilterAgeChange = (event) => {
+    setFilterAge(event.target.value);
+  };
+
+  const handleFilterTypeChange = (event) => {
+    setFilterType(event.target.value);
+  };
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error fetching data</div>;
 
+  let filteredAnimals = [...data];
+  if (filterAge !== "") {
+    filteredAnimals = filteredAnimals.filter((animal) =>
+      animal.age.toString().includes(filterAge),
+    );
+  }
+  if (filterType !== "") {
+    filteredAnimals = filteredAnimals.filter(
+      (animal) => animal.type === filterType,
+    );
+  }
+  if (sortByAge) {
+    filteredAnimals.sort((a, b) => parseInt(a.age) - parseInt(b.age));
+  }
+
   return (
     <div>
       <h2>Animal List</h2>
-      {data.map((animal) => (
+      <div>
+        <TextField
+          id="filter-age"
+          label="Filter by Age"
+          variant="outlined"
+          value={filterAge}
+          onChange={handleFilterAgeChange}
+          style={{ marginRight: "20px" }}
+        />
+        <FormControl variant="outlined" style={{ marginRight: "20px" }}>
+          <InputLabel id="filter-type-label">Filter by Type</InputLabel>
+          <Select
+            labelId="filter-type-label"
+            id="filter-type"
+            value={filterType}
+            onChange={handleFilterTypeChange}
+            label="Filter by Type"
+          >
+            <MenuItem value="">All</MenuItem>
+            {animalTypes.map((type, index) => (
+              <MenuItem key={index} value={type}>
+                {type}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Button onClick={handleSortByAge} variant="outlined">
+          {sortByAge ? "Sort by Age (Descending)" : "Sort by Age (Ascending)"}
+        </Button>
+      </div>
+      {filteredAnimals.map((animal) => (
         <AnimalCard key={animal.id} animal={animal} />
       ))}
     </div>
   );
 };
+
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString();
 };
+
 const AnimalCard = ({ animal }) => {
   const formattedNextCheckup = formatDate(animal.next_checkup);
 
@@ -75,4 +147,5 @@ const AnimalCard = ({ animal }) => {
     </Card>
   );
 };
+
 export default App;
